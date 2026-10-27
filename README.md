@@ -26,3 +26,29 @@
 5. Build (or build a Docker image)
 6. Deploy to staging
 7. Approval gate, then deploy to production
+
+## Best Practices:
+### Pipeline design
+
+1. Fail fast. Run the cheapest checks first (lint, type-check, unit tests) and the slow ones (integration, e2e) after.
+2. Keep the pipeline fast. Aim for under 10 minutes. Slow pipelines get bypassed. Use caching and run independent jobs in parallel.
+3. Build once, deploy the same artifact everywhere. Never rebuild for production. Staging and production must run the identical image or bundle.
+4. Keep the main branch always deployable. Use short-lived branches and small PRs.
+5. Use branch protection. Require passing checks and at least one review before merging to main.
+
+### Security
+
+1. Never hardcode secrets. Use the platform’s secret store, and prefer short-lived credentials (OIDC to AWS) over long-lived access keys.
+2. Never print secrets. Masking in logs is a safety net, not permission. The echo with DEPLOY_KEY in my example workflow is for demonstration only. Don’t copy that pattern into real pipelines.
+3. Least privilege. Set permissions: contents: read at the top of workflows and grant more only to jobs that need it.
+4. Pin third-party actions to a version tag, or a commit SHA for sensitive pipelines, since a compromised action runs with your secrets.
+5. Scan dependencies and images (npm audit, Dependabot, Trivy) as a pipeline step.
+
+### Reliability
+
+1. Make deployments repeatable and reversible. Know your rollback path before you need it, such as redeploying the previous image tag.
+2. Use approval gates for production and automatic deploys for staging.
+3. Run smoke tests after deploy, for example hitting /health.
+4. Use npm ci, not npm install, in pipelines for reproducible installs from the lockfile.
+5. Keep pipeline config in the repo (pipeline as code), reviewed like any other code.
+6. Set job timeouts (timeout-minutes) so a hung job doesn’t burn runner minutes.
